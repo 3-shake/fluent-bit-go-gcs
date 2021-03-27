@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 	"unsafe"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 )
+import "strings"
 
 var (
 	gcsClient Client
@@ -90,7 +90,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 
 func SaveRecords(bucket, prefix, tag string, records []map[interface{}]interface{}) error {
 	t := time.Now()
-	j, err := createJSON(t, tag, records)
+	j, err := createJSONLines(records)
 	if err != nil {
 		return err
 	}
@@ -103,8 +103,29 @@ func SaveRecords(bucket, prefix, tag string, records []map[interface{}]interface
 
 // GenerateObjectKey : gen format object name PREFIX/date/hour/tag/timestamp_uuid.log
 func GenerateObjectKey(prefix, tag string, t time.Time) string {
-	fileName := fmt.Sprintf("%d_%s.log", t.Unix(), uuid.Must(uuid.NewRandom()).String())
-	return filepath.Join(prefix, tag, fileName)
+	fileName := fmt.Sprintf("%s.log", uuid.Must(uuid.NewRandom()).String())
+	return filepath.Join(prefix, tag, t.Format("20060102"), fileName)
+}
+
+func createJSONLines(records []map[interface{}]interface{}) ([]byte, error) {
+	rs := make([]string, len(records))
+	for i, r := range records {
+		j, err := createJSON(r)
+		if err != nil {
+			return nil, err
+		}
+		rs[i] = j
+	}
+	return []byte(strings.Join(rs, "\n")), nil
+}
+
+func createJSON(record map[interface{}]interface{}) (string, error) {
+	js, err := jsoniter.Marshal(parseMap(record))
+	if err != nil {
+		return "{}", err
+	}
+
+	return string(js), nil
 }
 
 func parseMap(mapInterface map[interface{}]interface{}) map[string]interface{} {
@@ -123,24 +144,6 @@ func parseMap(mapInterface map[interface{}]interface{}) map[string]interface{} {
 	}
 
 	return m
-}
-
-func createJSON(t time.Time, tag string, records []map[interface{}]interface{}) ([]byte, error) {
-	rs := make([]map[string]interface{}, len(records))
-	for i, r := range records {
-		rs[i] = parseMap(r)
-	}
-
-	js, err := jsoniter.Marshal(map[string]interface{}{
-		"ts":      strconv.Itoa(int(t.Unix())),
-		"tag":     tag,
-		"records": rs,
-	})
-	if err != nil {
-		return []byte("{}"), err
-	}
-
-	return js, nil
 }
 
 //export FLBPluginExit
