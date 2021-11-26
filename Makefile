@@ -30,7 +30,7 @@ test:
 	PATH="${PWD}/bin:${PWD}/test/bin:${PATH}" go test ${TEST_FLAGS} $(shell go list ./... | sort -u)
 
 build:
-	$(SUDO) docker build -t fluent-bit-out-gcs:$(IMAGE_TAG) \
+	docker build -t fluent-bit-out-gcs:$(IMAGE_TAG) \
 		--build-arg VCS_REF="$(IMAGE_TAG)" \
 		--build-arg BUILD_DATE="$(BUILD_DATE)" \
 		-f Dockerfile .
