@@ -104,7 +104,7 @@ func SaveRecords(bucket, prefix, tag string, records []map[interface{}]interface
 // GenerateObjectKey : gen format object name PREFIX/date/hour/tag/timestamp_uuid.log
 func GenerateObjectKey(prefix, tag string, t time.Time) string {
 	fileName := fmt.Sprintf("%s.log", uuid.Must(uuid.NewRandom()).String())
-	return filepath.Join(prefix, tag, t.Format("20060102"), fileName)
+	return filepath.Join(prefix, tag, t.Format("20060102/15"), fileName)
 }
 
 func createJSONLines(records []map[interface{}]interface{}) ([]byte, error) {
